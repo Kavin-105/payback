@@ -3,36 +3,73 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/expense.dart';
 
 class ExpenseService {
-  final List<Expense> _expenses = [];
-  List<Expense> get expenses => _expenses;
+  static const String _expensesKey = 'expenses';
 
-  static const String _storageKey = "expenses";
-
-  Future<void> loadExpenses() async {
+  Future<List<Expense>> getExpenses() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final data = prefs.getStringList(_storageKey) ?? [];
-      _expenses.clear();
-      _expenses.addAll(data.map((e) => Expense.fromJson(jsonDecode(e))));
+      final expensesString = prefs.getStringList(_expensesKey) ?? [];
+      
+      List<Expense> expenses = [];
+      for (var jsonString in expensesString) {
+        try {
+          final map = json.decode(jsonString) as Map<String, dynamic>;
+          expenses.add(Expense.fromMap(map));
+        } catch (e) {
+          print('Error parsing expense: $e');
+        }
+      }
+      
+      // Sort expenses by date (newest first)
+      expenses.sort((a, b) => b.date.compareTo(a.date));
+      return expenses;
     } catch (e) {
-      // if something goes wrong, just start with empty list
-      _expenses.clear();
+      print('Error getting expenses: $e');
+      return [];
     }
   }
 
   Future<void> addExpense(Expense expense) async {
-    _expenses.add(expense);
-    await _saveExpenses();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final expenses = await getExpenses();
+      
+      expenses.add(expense);
+      
+      final expensesString = expenses.map((exp) {
+        return json.encode(exp.toMap());
+      }).toList();
+      
+      await prefs.setStringList(_expensesKey, expensesString);
+      print('Expense saved successfully. Total expenses: ${expenses.length}');
+    } catch (e) {
+      print('Error saving expense: $e');
+    }
   }
 
-  Future<void> toggleReturned(int index) async {
-    _expenses[index].isReturned = !_expenses[index].isReturned;
-    await _saveExpenses();
+  Future<void> deleteExpense(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final expenses = await getExpenses();
+      
+      expenses.removeWhere((expense) => expense.id == id);
+      
+      final expensesString = expenses.map((exp) {
+        return json.encode(exp.toMap());
+      }).toList();
+      
+      await prefs.setStringList(_expensesKey, expensesString);
+    } catch (e) {
+      print('Error deleting expense: $e');
+    }
   }
 
-  Future<void> _saveExpenses() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = _expenses.map((e) => jsonEncode(e.toJson())).toList();
-    await prefs.setStringList(_storageKey, data);
+  Future<void> clearAllExpenses() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_expensesKey);
+    } catch (e) {
+      print('Error clearing expenses: $e');
+    }
   }
 }

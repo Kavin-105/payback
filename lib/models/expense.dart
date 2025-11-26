@@ -1,33 +1,35 @@
 class Expense {
-  final String friendName;
-  final double amount;
-  final String description;
+  final String id;
+  final String name;
   final DateTime date;
-  bool received; // true = received, false = not received
+  final String description;
+  final double amount;
 
   Expense({
-    required this.friendName,
-    required this.amount,
-    required this.description,
+    required this.id,
+    required this.name,
     required this.date,
-    this.received = false,
+    required this.description,
+    required this.amount,
   });
 
-  Map<String, dynamic> toJson() => {
-        'friendName': friendName,
-        'amount': amount,
-        'description': description,
-        'date': date.toIso8601String(),
-        'received': received,
-      };
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'date': date.toIso8601String(),
+      'description': description,
+      'amount': amount,
+    };
+  }
 
-  factory Expense.fromJson(Map<String, dynamic> json) {
+  factory Expense.fromMap(Map<String, dynamic> map) {
     return Expense(
-      friendName: json['friendName'],
-      amount: (json['amount'] as num).toDouble(),
-      description: json['description'],
-      date: DateTime.parse(json['date']),
-      received: json['received'] ?? false,
+      id: map['id'],
+      name: map['name'],
+      date: DateTime.parse(map['date']),
+      description: map['description'],
+      amount: map['amount'].toDouble(),
     );
   }
 }
